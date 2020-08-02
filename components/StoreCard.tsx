@@ -65,7 +65,7 @@ export default class StoreCard extends PureComponent<Props> {
     const { store } = this.props;
     // console.log(store.hours[0].day);
 
-    console.log(store);
+    // console.log(store);
 
     if (store !== undefined) {
       return (

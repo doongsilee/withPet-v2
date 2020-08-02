@@ -7,22 +7,27 @@ import Colors from '../constants/Colors';
 import useColorScheme from '../hooks/useColorScheme';
 import TabOneScreen from '../screens/TabOneScreen';
 import TabTwoScreen from '../screens/TabTwoScreen';
-import { BottomTabParamList, TabOneParamList, TabTwoParamList } from '../types';
+import { BottomTabParamList, HomeParamList, TabTwoParamList } from '../types';
 import HomeScreen from '../screens/HomeScreen';
-import { Image } from 'react-native';
+import { Image, Platform } from 'react-native';
+import StoreDetailScreen from '../screens/StoreDetailScreen';
 
 const BottomTab = createBottomTabNavigator<BottomTabParamList>();
 
 export default function BottomTabNavigator() {
   const colorScheme = useColorScheme();
 
+  const tabHeight = Platform.OS === 'ios' ? 80 : 50;
+
   return (
     <BottomTab.Navigator
-      initialRouteName="TabOne"
-      tabBarOptions={{ activeTintColor: Colors[colorScheme].tint }}>
+      initialRouteName="HomeStack"
+      tabBarOptions={{ activeTintColor: Colors[colorScheme].tint , style : {height: tabHeight}}}
+      >
+        
       <BottomTab.Screen
-        name="TabOne"
-        component={TabOneNavigator}
+        name="HomeStack"
+        component={HomeStackNavigator}
         options={{
           tabBarIcon: ({ color }) => (
             <Image
@@ -55,22 +60,23 @@ export default function BottomTabNavigator() {
 
 // Each tab has its own navigation stack, you can read more about this pattern here:
 // https://reactnavigation.org/docs/tab-based-navigation#a-stack-navigator-for-each-tab
-const TabOneStack = createStackNavigator<TabOneParamList>();
+const HomeStack = createStackNavigator<HomeParamList>();
 
-function TabOneNavigator() {
+function HomeStackNavigator() {
   return (
-    <TabOneStack.Navigator initialRouteName="Home">
-      <TabOneStack.Screen
-        name="TabOneScreen"
-        component={TabOneScreen}
-        options={{ headerTitle: 'Tab One Title' }}
-      />
-      <TabOneStack.Screen
+    <HomeStack.Navigator initialRouteName="Home">
+      
+      <HomeStack.Screen
         name="Home"
         component={HomeScreen}
         options={{ headerShown: false }}
       />
-    </TabOneStack.Navigator>
+      <HomeStack.Screen
+        name="StoreDetail"
+        component={StoreDetailScreen}
+        options={{ headerShown: false }}
+      />
+    </HomeStack.Navigator>
   );
 }
 

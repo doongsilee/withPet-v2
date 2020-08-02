@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   Animated,
+  TouchableOpacity,
 } from 'react-native';
 
 import Colors from '../constants/Colors';
@@ -20,9 +21,14 @@ import {
 } from '../constants/Utils';
 
 import { CustomMarker } from '../components/CustomMarker';
-import { TabOneParamList, store, location, Category } from '../types';
+import { HomeParamList, store, location, Category } from '../types';
 
-import MapView, { PROVIDER_GOOGLE, Marker, MapEvent } from 'react-native-maps';
+import MapView, {
+  PROVIDER_GOOGLE,
+  Marker,
+  MapEvent,
+  Region,
+} from 'react-native-maps';
 import layout from '../constants/Layout';
 import { Icon, Header, Button } from 'react-native-elements';
 
@@ -31,25 +37,30 @@ import 'firebase/firestore';
 import StoreCard from '../components/StoreCard';
 
 import * as Location from 'expo-location';
+import { MyLocation } from '../components/MyLocation';
 
 const ASPECT_RATIO = layout.window.width / layout.window.height;
 const LATITUDE_DELTA = 0.0922;
 const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
+const DEFAULT_PADDING = { top: 140, right: 40, bottom: 340, left: 40 };
 
-type HomeScreenNavigationProp = StackNavigationProp<TabOneParamList, 'Home'>;
+type HomeScreenNavigationProp = StackNavigationProp<HomeParamList, 'Home'>;
 
 type Tprops = {
   navigation: HomeScreenNavigationProp;
 };
+
 type Tstate = {
-  curLocation: location;
+  ancorLocation: location;
+  myLocation: location;
   curLocationStr: string;
   places: Array<store>;
   needRefresh: boolean;
-  selectedMarker?: string;
+  selectedMarker: string | null;
   isShowingStores: boolean;
   selectedCategory: number;
   scrollY: Animated.AnimatedValue;
+  userTouched: boolean;
 };
 
 export default class HomeScreen extends React.Component<Tprops, Tstate> {
@@ -61,13 +72,16 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
     this.map = null;
 
     this.state = {
-      curLocation: { latitude: 37.496366, longitude: 127.028364 },
+      ancorLocation: { latitude: 37.496366, longitude: 127.028364 },
+      myLocation: { latitude: 37.496366, longitude: 127.028364 },
       curLocationStr: '',
       places: [],
       needRefresh: false,
       isShowingStores: false,
       selectedCategory: -1,
       scrollY: new Animated.Value(0),
+      userTouched: false,
+      selectedMarker: null,
     };
   }
 
@@ -75,25 +89,28 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
     this.retreiveDeviceLocation();
   }
 
-  async retreiveDeviceLocation() {
+  retreiveDeviceLocation = async () => {
     let { status } = await Location.requestPermissionsAsync();
     if (status !== 'granted') {
       console.log('Permission to access location was denied');
     }
     let location = await Location.getCurrentPositionAsync({});
-    const curLocation: location = {
+    const ancorLocation: location = {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
     };
-    const curLocationStr = await this.reverseGeocoding(curLocation);
+
+    const myLocation = ancorLocation;
+    const curLocationStr = await this.reverseGeocoding(ancorLocation);
     this.setState({
-      curLocation,
+      myLocation,
+      ancorLocation,
       curLocationStr,
     });
 
     this.map != null &&
-      this.map.animateCamera({ center: curLocation, zoom: 14 });
-  }
+      this.map.animateCamera({ center: ancorLocation, zoom: 14 });
+  };
 
   async reverseGeocoding(position: location) {
     // eslint-disable-next-line no-undef
@@ -136,7 +153,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
     // console.log(position);
 
     if (!position) {
-      position = this.state.curLocation;
+      position = this.state.ancorLocation;
     }
 
     const north = destinationPointGivenDistanceAndBearingFromSource(
@@ -187,8 +204,8 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
 
     let places = [];
     for (const docSnapshot of querySnapshot.docs) {
-      const docId = docSnapshot.id;
-      const data = { docId, ...(docSnapshot.data() as store) };
+      const id = docSnapshot.id;
+      const data: store = { id, ...docSnapshot.data() } as store;
       places.push(data);
     }
 
@@ -223,7 +240,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
       // Toast.show('앗, 이 주변에 댕댕이와 함께 갈 수있는 곳이 없네요');
     }
     this.setState({ places: places, needRefresh: false });
-    this.map && this.map.animateCamera({ zoom: 14 });
+    this.fitAllMarkers(places);
   }
 
   handleCategoryPress = (category: Category, index: number) => {
@@ -231,31 +248,95 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
       isShowingStores: true,
       selectedCategory: index,
     });
-    this.retrieveStores(this.state.curLocation, category);
+    this.retrieveStores(this.state.ancorLocation, category);
   };
 
   handleBack = () => {
     this.setState({
       isShowingStores: false,
       selectedCategory: -1,
-    })
-  }
+      selectedMarker: null,
+    });
+  };
+
+  handlePressStore = (store: store) => {
+    this.props.navigation.navigate('StoreDetail', { store });
+  };
+
+  handleRegionChanged = (region: Region) => {
+    if (this.state.userTouched) {
+      const newLocation: location = {
+        latitude: region.latitude,
+        longitude: region.longitude,
+      };
+
+      const _distance = distanceInKmBetweenEarthCoordinates(
+        this.state.ancorLocation.latitude,
+        this.state.ancorLocation.longitude,
+        newLocation.latitude,
+        newLocation.longitude,
+      );
+
+      if (_distance > 0.5) {
+        this.setState({
+          ancorLocation: newLocation,
+          needRefresh: true,
+          userTouched: false,
+        });
+      }
+    }
+  };
+
+  fitAllMarkers = (places: Array<store>) => {
+    const markers = places.map((place) => place.gps);
+
+    if (places.length) {
+      this.map &&
+        this.map.fitToCoordinates(markers, {
+          edgePadding: DEFAULT_PADDING,
+          animated: true,
+        });
+    }
+  };
+
+  handleMarkerPress = (event: MapEvent<{ action: string; id: string }>) => {
+    if (event.nativeEvent.id === 'myPos') return;
+    const { selectedMarker } = this.state;
+
+    console.log(event.nativeEvent);
+
+    if (selectedMarker === null) {
+      this.setState({
+        selectedMarker: event.nativeEvent.id,
+      });
+    } else {
+      this.setState({
+        selectedMarker: null,
+      });
+    }
+    // this.setState({
+    //   markerPressed
+    // })
+  };
 
   render() {
     const {
-      curLocation,
+      ancorLocation,
+      myLocation,
       curLocationStr,
       places,
       isShowingStores,
       selectedCategory,
-      scrollY
+      scrollY,
+      needRefresh,
+      selectedMarker,
     } = this.state;
 
     const categories: Array<Category> = getCategoryList();
 
     const translationY = this.state.scrollY.interpolate({
       inputRange: [0, 100],
-      outputRange: [480,240],
+      outputRange: [480, 240],
       extrapolate: 'clamp',
     });
 
@@ -266,33 +347,43 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
           style={styles.mapStyle}
           provider={PROVIDER_GOOGLE}
           initialRegion={{
-            latitude: curLocation.latitude,
-            longitude: curLocation.longitude,
+            latitude: ancorLocation.latitude,
+            longitude: ancorLocation.longitude,
             latitudeDelta: LATITUDE_DELTA,
             longitudeDelta: LONGITUDE_DELTA,
           }}
-          showsMyLocationButton={true}
-          showsUserLocation={true}
-          toolbarEnabled={false}>
-          {places.map((place) => (
-            <Marker
-              identifier={place.id}
-              coordinate={{
-                latitude: place.gps.latitude,
-                longitude: place.gps.longitude,
-              }}>
-              <CustomMarker
-                place={place}
-                isSelected={
-                  place.id === this.state.selectedMarker ? true : false
-                }
-              />
-            </Marker>
-          ))}
+          minZoomLevel={14}
+          maxZoomLevel={16}
+          toolbarEnabled={false}
+          onPanDrag={() => {
+            this.setState({ userTouched: true });
+          }}
+          onPress={() => this.setState({ selectedMarker: null })}
+          onRegionChangeComplete={this.handleRegionChanged}
+          onMarkerPress={this.handleMarkerPress}>
+          <Marker identifier={'myPos'} coordinate={myLocation}>
+            <MyLocation />
+          </Marker>
+          {isShowingStores &&
+            places.map((place) => (
+              <Marker
+                identifier={place.id}
+                coordinate={{
+                  latitude: place.gps.latitude,
+                  longitude: place.gps.longitude,
+                }}>
+                <CustomMarker
+                  place={place}
+                  isSelected={
+                    place.id === this.state.selectedMarker ? true : false
+                  }
+                />
+              </Marker>
+            ))}
         </MapView>
-        <View style={styles.upperContainer}>
+        <View pointerEvents="box-none" style={styles.overlayContainer}>
           {!isShowingStores ? (
-            <>
+            <View>
               <View style={styles.upper}>
                 <Icon
                   containerStyle={styles.loccationIcon}
@@ -329,47 +420,101 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
                   );
                 })}
               </ScrollView>
-            </>
+              <TouchableOpacity
+                style={styles.myLocationButton}
+                onPress={this.retreiveDeviceLocation}>
+                <Icon name="my-location" size={18} color={Colors.primariy} />
+              </TouchableOpacity>
+            </View>
           ) : (
             <>
-              <Header
-                backgroundColor={'#fff'}
-                leftComponent={{ icon: 'arrow-back', color: '#000', onPress: this.handleBack }}
-                centerComponent={{
-                  text: categories[selectedCategory].name,
-                  style: { color: '#000' },
-                }}
-              />
-              {places.length > 0 && (
-                <Animated.ScrollView
-                  style={[
-                    styles.listView,
-                    {
-                      transform: [
+              <View>
+                <Header
+                  backgroundColor={'#fff'}
+                  leftComponent={{
+                    icon: 'arrow-back',
+                    color: '#000',
+                    onPress: this.handleBack,
+                  }}
+                  centerComponent={{
+                    text: categories[selectedCategory].name,
+                    style: { color: '#000' },
+                  }}
+                />
+                <TouchableOpacity
+                  style={[styles.myLocationButton, {marginTop: 10}]}
+                  onPress={this.retreiveDeviceLocation}>
+                  <Icon name="my-location" size={18} color={Colors.primariy} />
+                </TouchableOpacity>
+                
+                {needRefresh && (
+                  <Button
+                    containerStyle={styles.searchThisAreaBtn}
+                    buttonStyle={{ backgroundColor: 'white', borderRadius: 20 }}
+                    titleStyle={{ color: '#0091ea', fontSize: 12 }}
+                    raised
+                    onPress={() => {
+                      this.retrieveStores(
+                        this.state.ancorLocation,
+                        categories[selectedCategory],
+                      );
+                    }}
+                    icon={
+                      <Icon
+                        containerStyle={styles.categoryIcon}
+                        name={'refresh'}
+                        type="material"
+                        size={18}
+                        color={'#0091ea'}
+                      />
+                    }
+                    title={'이 지역 검색하기'}
+                  />
+                )}
+                
+              </View>
+              {places.length > 0 &&
+                (selectedMarker === null ? (
+                  <Animated.ScrollView
+                    style={[
+                      styles.listView,
+                      {
+                        transform: [
+                          {
+                            translateY: translationY,
+                          },
+                        ],
+                        height: layout.window.height,
+                      },
+                    ]}
+                    scrollEventThrottle={16}
+                    onScroll={Animated.event(
+                      [
                         {
-                          translateY: translationY,
+                          nativeEvent: { contentOffset: { y: scrollY } },
                         },
                       ],
-                      height:  layout.window.height
-                    },
-                  ]}
-                  scrollEventThrottle={16}
-                  onScroll={Animated.event(
-                    [
                       {
-                        nativeEvent: { contentOffset: { y: scrollY } },
+                        useNativeDriver: true, // <- Native Driver used for animated events
                       },
-                    ],
-                    {
-                      useNativeDriver: true, // <- Native Driver used for animated events
-                    },
-                  )}
-                >
-                  {places.map((place) => (
-                    <StoreCard store={place} />
-                  ))}
-                </Animated.ScrollView>
-              )}
+                    )}>
+                    {places.map((place) => (
+                      <StoreCard
+                        store={place}
+                        onPress={this.handlePressStore}
+                      />
+                    ))}
+                  </Animated.ScrollView>
+                ) : (
+                  <View style={styles.shadow}>
+                    <StoreCard
+                      store={
+                        places.filter((place) => place.id === selectedMarker)[0]
+                      }
+                      onPress={this.handlePressStore}
+                    />
+                  </View>
+                ))}
             </>
           )}
         </View>
@@ -391,11 +536,11 @@ function getCategoryList(): Array<Category> {
       icon: require(assetUrl + 'restaurant_ic.png'),
       color: Colors.restarauntColor,
     },
-    {
-      name: '실내놀이터',
-      icon: require(assetUrl + 'enter_in_ic.png'),
-      color: Colors.enterInColor,
-    },
+    // {
+    //   name: '실내놀이터',
+    //   icon: require(assetUrl + 'enter_in_ic.png'),
+    //   color: Colors.enterInColor,
+    // },
     // {
     //   name: '실외놀이터',
     //   icon: assetUrl + 'enter_out_ic.png',
@@ -442,12 +587,15 @@ const styles = StyleSheet.create({
   mapStyle: {
     position: 'absolute',
     width: layout.window.width,
-    height: layout.window.height,
+    height: layout.window.height - layout.tabHeight,
   },
-  upperContainer: {
+  overlayContainer: {
     flexDirection: 'column',
+    flex: 1,
+    justifyContent: 'space-between',
   },
   upper: {
+    height: 50,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -501,6 +649,24 @@ const styles = StyleSheet.create({
     width: 16,
     marginRight: 4,
   },
+  myLocationButton: {
+    backgroundColor: 'white',
+    width: 45,
+    height: 45,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 45,
+    alignSelf: 'flex-end',
+    marginRight: 15,
+  },
+  searchThisAreaBtn: {
+    width: 160,
+    marginTop: 16,
+    // backgroundColor: 'white',
+    borderRadius: 20,
+    alignSelf: 'center',
+  },
   listView: {
     backgroundColor: 'white',
     ...Platform.select({
@@ -512,6 +678,19 @@ const styles = StyleSheet.create({
       },
       android: {
         elevation: 8,
+      },
+    }),
+  },
+  shadow: {
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 4,
       },
     }),
   },
