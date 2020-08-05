@@ -1,6 +1,7 @@
 export type RootStackParamList = {
   Root: undefined;
   NotFound: undefined;
+  SignUp: undefined;
 };
 
 export type BottomTabParamList = {
@@ -10,7 +11,7 @@ export type BottomTabParamList = {
 
 export type HomeParamList = {
   Home: undefined;
-  StoreDetail: {store: store};
+  StoreDetail: { store: store };
 };
 
 export type TabTwoParamList = {

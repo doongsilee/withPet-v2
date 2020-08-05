@@ -1,19 +1,14 @@
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import React, { PureComponent } from 'react';
 import { Text, View, StyleSheet, Linking } from 'react-native';
-
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
-import { HomeParamList } from '../types';
-
-import { getStatusBarHeight } from 'react-native-status-bar-height';
-import { Image, Icon, Button } from 'react-native-elements';
-
-// import LinearGradient from 'react-native-linear-gradient';
-
-import Colors from '../constants/Colors';
-// import BaseCss from '../modules/BaseCss';
+import { Icon, Button } from 'react-native-elements';
 import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
 import { SliderBox } from 'react-native-image-slider-box';
+import { getStatusBarHeight } from 'react-native-status-bar-height';
+
+import Colors from '../constants/Colors';
+import { HomeParamList } from '../types';
 
 type DetailScreenNavigationProp = StackNavigationProp<
   HomeParamList,
@@ -113,7 +108,7 @@ export class StoreDetailScreen extends PureComponent<Tprops, Tstate> {
             style={styles.storeImages}
             dotStyle={{ marginBottom: 15 }}
             dotColor={Colors.primariy}
-            resizeMode={'cover'}
+            resizeMode="cover"
             // onCurrentImagePressed={index =>
             //   console.warn(`image ${index} pressed`)
             // }
@@ -173,7 +168,7 @@ export class StoreDetailScreen extends PureComponent<Tprops, Tstate> {
               )}
 
               <Button
-                title={'영업시간 더보기'}
+                title="영업시간 더보기"
                 type="clear"
                 titleStyle={{
                   color: Colors.primariy,
@@ -213,7 +208,7 @@ export class StoreDetailScreen extends PureComponent<Tprops, Tstate> {
                 ))
               )}
               <Button
-                title={'서비스 더보기'}
+                title="서비스 더보기"
                 type="clear"
                 titleStyle={{
                   color: Colors.primariy,

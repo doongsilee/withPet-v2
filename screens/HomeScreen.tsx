@@ -1,3 +1,6 @@
+import { StackNavigationProp } from '@react-navigation/stack';
+import * as firebase from 'firebase';
+import 'firebase/firestore';
 import * as React from 'react';
 import {
   View,
@@ -9,35 +12,28 @@ import {
   Animated,
   TouchableOpacity,
 } from 'react-native';
-
-import Colors from '../constants/Colors';
-
-import { StackNavigationProp } from '@react-navigation/stack';
-
-import {
-  destinationPointGivenDistanceAndBearingFromSource,
-  distanceInKmBetweenEarthCoordinates,
-  kmToMeter,
-} from '../constants/Utils';
-
-import { CustomMarker } from '../components/CustomMarker';
-import { HomeParamList, store, location, Category } from '../types';
-
+import { Icon, Header, Button } from 'react-native-elements';
 import MapView, {
   PROVIDER_GOOGLE,
   Marker,
   MapEvent,
   Region,
 } from 'react-native-maps';
-import layout from '../constants/Layout';
-import { Icon, Header, Button } from 'react-native-elements';
 
-import * as firebase from 'firebase';
-import 'firebase/firestore';
-import StoreCard from '../components/StoreCard';
-
-import * as Location from 'expo-location';
+import { CustomMarker } from '../components/CustomMarker';
 import { MyLocation } from '../components/MyLocation';
+import StoreCard from '../components/StoreCard';
+import Colors from '../constants/Colors';
+import layout from '../constants/Layout';
+import {
+  destinationPointGivenDistanceAndBearingFromSource,
+  distanceInKmBetweenEarthCoordinates,
+  kmToMeter,
+} from '../constants/Utils';
+import { HomeParamList, store, location, Category } from '../types';
+
+// eslint-disable-next-line import/order
+import * as Location from 'expo-location';
 
 const ASPECT_RATIO = layout.window.width / layout.window.height;
 const LATITUDE_DELTA = 0.0922;
@@ -54,7 +50,7 @@ type Tstate = {
   ancorLocation: location;
   myLocation: location;
   curLocationStr: string;
-  places: Array<store>;
+  places: store[];
   needRefresh: boolean;
   selectedMarker: string | null;
   isShowingStores: boolean;
@@ -90,11 +86,11 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
   }
 
   retreiveDeviceLocation = async () => {
-    let { status } = await Location.requestPermissionsAsync();
+    const { status } = await Location.requestPermissionsAsync();
     if (status !== 'granted') {
       console.log('Permission to access location was denied');
     }
-    let location = await Location.getCurrentPositionAsync({});
+    const location = await Location.getCurrentPositionAsync({});
     const ancorLocation: location = {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
@@ -218,7 +214,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
 
     places = places.map(
       (place: store): store => {
-        let _distance = distanceInKmBetweenEarthCoordinates(
+        const _distance = distanceInKmBetweenEarthCoordinates(
           position.latitude,
           position.longitude,
           place.gps.latitude,
@@ -239,7 +235,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
       console.log('No Places!');
       // Toast.show('앗, 이 주변에 댕댕이와 함께 갈 수있는 곳이 없네요');
     }
-    this.setState({ places: places, needRefresh: false });
+    this.setState({ places, needRefresh: false });
     this.fitAllMarkers(places);
   }
 
@@ -287,7 +283,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
     }
   };
 
-  fitAllMarkers = (places: Array<store>) => {
+  fitAllMarkers = (places: store[]) => {
     const markers = places.map((place) => place.gps);
 
     if (places.length) {
@@ -332,7 +328,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
       selectedMarker,
     } = this.state;
 
-    const categories: Array<Category> = getCategoryList();
+    const categories: Category[] = getCategoryList();
 
     const translationY = this.state.scrollY.interpolate({
       inputRange: [0, 100],
@@ -361,7 +357,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
           onPress={() => this.setState({ selectedMarker: null })}
           onRegionChangeComplete={this.handleRegionChanged}
           onMarkerPress={this.handleMarkerPress}>
-          <Marker identifier={'myPos'} coordinate={myLocation}>
+          <Marker identifier="myPos" coordinate={myLocation}>
             <MyLocation />
           </Marker>
           {isShowingStores &&
@@ -374,9 +370,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
                 }}>
                 <CustomMarker
                   place={place}
-                  isSelected={
-                    place.id === this.state.selectedMarker ? true : false
-                  }
+                  isSelected={place.id === this.state.selectedMarker}
                 />
               </Marker>
             ))}
@@ -388,14 +382,14 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
                 <Icon
                   containerStyle={styles.loccationIcon}
                   type="foundation"
-                  name={'marker'}
+                  name="marker"
                   size={26}
                   color={Colors.primariy}
                 />
                 <Text style={styles.locationText}>{curLocationStr}</Text>
               </View>
               <ScrollView
-                horizontal={true}
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.low}>
                 {categories.map((category, index) => {
@@ -414,7 +408,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
                       titleStyle={styles.categoryLabel}
                       buttonStyle={styles.category}
                       containerStyle={{ marginRight: 8, paddingHorizontal: 4 }}
-                      raised={true}
+                      raised
                       onPress={(e) => this.handleCategoryPress(category, index)}
                     />
                   );
@@ -430,7 +424,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
             <>
               <View>
                 <Header
-                  backgroundColor={'#fff'}
+                  backgroundColor="#fff"
                   leftComponent={{
                     icon: 'arrow-back',
                     color: '#000',
@@ -442,11 +436,11 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
                   }}
                 />
                 <TouchableOpacity
-                  style={[styles.myLocationButton, {marginTop: 10}]}
+                  style={[styles.myLocationButton, { marginTop: 10 }]}
                   onPress={this.retreiveDeviceLocation}>
                   <Icon name="my-location" size={18} color={Colors.primariy} />
                 </TouchableOpacity>
-                
+
                 {needRefresh && (
                   <Button
                     containerStyle={styles.searchThisAreaBtn}
@@ -462,16 +456,15 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
                     icon={
                       <Icon
                         containerStyle={styles.categoryIcon}
-                        name={'refresh'}
+                        name="refresh"
                         type="material"
                         size={18}
-                        color={'#0091ea'}
+                        color="#0091ea"
                       />
                     }
-                    title={'이 지역 검색하기'}
+                    title="이 지역 검색하기"
                   />
                 )}
-                
               </View>
               {places.length > 0 &&
                 (selectedMarker === null ? (
@@ -523,7 +516,7 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
   }
 }
 
-function getCategoryList(): Array<Category> {
+function getCategoryList(): Category[] {
   const assetUrl = '../assets/images/';
   return [
     {
