@@ -64,7 +64,6 @@ const HomeStack = createStackNavigator<HomeParamList>();
 function HomeStackNavigator() {
   return (
     <HomeStack.Navigator initialRouteName="Home">
-      
       <HomeStack.Screen
         name="Home"
         component={HomeScreen}

@@ -11,6 +11,7 @@ import {
   Image,
   Animated,
   TouchableOpacity,
+  FlatList,
 } from 'react-native';
 import { Icon, Header, Button } from 'react-native-elements';
 import MapView, {
@@ -19,6 +20,7 @@ import MapView, {
   MapEvent,
   Region,
 } from 'react-native-maps';
+import SlidingUpPanel from 'rn-sliding-up-panel';
 
 import { CustomMarker } from '../components/CustomMarker';
 import { MyLocation } from '../components/MyLocation';
@@ -34,6 +36,7 @@ import { HomeParamList, store, location, Category } from '../types';
 
 // eslint-disable-next-line import/order
 import * as Location from 'expo-location';
+// import { FlatList } from 'react-native-gesture-handler';
 
 const ASPECT_RATIO = layout.window.width / layout.window.height;
 const LATITUDE_DELTA = 0.0922;
@@ -61,6 +64,7 @@ type Tstate = {
 
 export default class HomeScreen extends React.Component<Tprops, Tstate> {
   map: MapView | null;
+  panel: SlidingUpPanel | null | undefined;
 
   constructor(props: Tprops) {
     super(props);
@@ -330,11 +334,13 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
 
     const categories: Category[] = getCategoryList();
 
-    const translationY = this.state.scrollY.interpolate({
-      inputRange: [0, 100],
-      outputRange: [480, 240],
-      extrapolate: 'clamp',
-    });
+    // const translationY = this.state.scrollY.interpolate({
+    //   inputRange: [0, 100],
+    //   outputRange: [480, 240],
+    //   extrapolate: 'clamp',
+    // });
+
+    // const translationY = 0;
 
     return (
       <View style={styles.container}>
@@ -424,6 +430,8 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
             <>
               <View>
                 <Header
+                  // containerStyle={{ position: 'absolute', width: '100%', zIndex: 4 }}
+                  onLayout={(e) => console.log(e.nativeEvent.layout)}
                   backgroundColor="#fff"
                   leftComponent={{
                     icon: 'arrow-back',
@@ -468,36 +476,40 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
               </View>
               {places.length > 0 &&
                 (selectedMarker === null ? (
-                  <Animated.ScrollView
-                    style={[
-                      styles.listView,
-                      {
-                        transform: [
-                          {
-                            translateY: translationY,
-                          },
-                        ],
-                        height: layout.window.height,
-                      },
-                    ]}
-                    scrollEventThrottle={16}
-                    onScroll={Animated.event(
-                      [
-                        {
-                          nativeEvent: { contentOffset: { y: scrollY } },
-                        },
-                      ],
-                      {
-                        useNativeDriver: true, // <- Native Driver used for animated events
-                      },
-                    )}>
-                    {places.map((place) => (
-                      <StoreCard
-                        store={place}
-                        onPress={this.handlePressStore}
-                      />
-                    ))}
-                  </Animated.ScrollView>
+                  <SlidingUpPanel
+                    ref={(c) => (this.panel = c)}
+                    draggableRange={{
+                      top: layout.window.height - 88 - 80,
+                      bottom: 200,
+                    }}
+                    containerStyle={styles.listView}
+                    // animatedValue={this._draggedValue}
+                    showBackdrop={false}>
+                    {(dragHandler) => (
+                      <View
+                        style={{
+                          flex: 1,
+                          zIndex: -3,
+                          backgroundColor: 'white',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                        <View style={styles.dragHandler} {...dragHandler}>
+                          <View style={styles.indicator} />
+                        </View>
+                        <FlatList
+                          style={{ width: '100%' }}
+                          data={places}
+                          renderItem={(item) => (
+                            <StoreCard
+                              store={item.item}
+                              onPress={this.handlePressStore}
+                            />
+                          )}
+                        />
+                      </View>
+                    )}
+                  </SlidingUpPanel>
                 ) : (
                   <View style={styles.shadow}>
                     <StoreCard
@@ -662,6 +674,7 @@ const styles = StyleSheet.create({
   },
   listView: {
     backgroundColor: 'white',
+    zIndex: 1,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
@@ -686,5 +699,20 @@ const styles = StyleSheet.create({
         elevation: 4,
       },
     }),
+  },
+  dragHandler: {
+    alignSelf: 'stretch',
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  indicator: {
+    width: 50,
+    height: 3,
+    opacity: 0.5,
+    borderRadius: 1,
+    backgroundColor: '#555869',
+    alignSelf: 'center',
   },
 });

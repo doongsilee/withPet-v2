@@ -36,7 +36,7 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
   return (
-    <Stack.Navigator  initialRouteName="SignUp" screenOptions={{ headerShown: false }}>
+    <Stack.Navigator  initialRouteName="Root" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Root" component={BottomTabNavigator} />
       <Stack.Screen
         name="NotFound"
