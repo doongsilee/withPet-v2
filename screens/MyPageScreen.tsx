@@ -1,19 +1,21 @@
 import * as React from 'react';
 import { StyleSheet } from 'react-native';
 
-import EditScreenInfo from '../components/EditScreenInfo';
+import { Avatar } from 'react-native-elements';
 import { Text, View } from '../components/Themed';
 
-export default function TabTwoScreen() {
+export default function MyPageScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tab Two</Text>
-      <View
-        style={styles.separator}
-        lightColor="#eee"
-        darkColor="rgba(255,255,255,0.1)"
+      <Avatar
+        rounded
+        source={{
+          uri:
+            "https://s3.amazonaws.com/uifaces/faces/twitter/ladylexy/128.jpg",
+        }}
+        size={64}
       />
-      <EditScreenInfo path="/screens/TabTwoScreen.tsx" />
+      <Text>이현우</Text>
     </View>
   );
 }
@@ -22,7 +24,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 24,
   },
   title: {
     fontSize: 20,

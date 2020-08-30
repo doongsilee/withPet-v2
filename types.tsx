@@ -6,7 +6,7 @@ export type RootStackParamList = {
 
 export type BottomTabParamList = {
   HomeStack: undefined;
-  TabTwo: undefined;
+  MyPageStack: undefined;
 };
 
 export type HomeParamList = {
@@ -14,8 +14,8 @@ export type HomeParamList = {
   StoreDetail: { store: store };
 };
 
-export type TabTwoParamList = {
-  TabTwoScreen: undefined;
+export type MyPageStackParamList = {
+  MyPageScreen: undefined;
 };
 
 export type location = {
@@ -28,15 +28,15 @@ export type store = {
   nid: string;
   name: string;
   address: string;
-  images: Array<string>;
+  images: string[];
   phone: string;
   distance: string;
-  category: Array<string>;
-  hours: Array<hour>;
-  menus: Array<menu>;
+  category: string[];
+  hours: hour[];
+  menus: menu[];
   rating: number;
-  reviews: number;
-  tags: Array<string>;
+  reviews: Review[];
+  tags: string[];
   gps: location;
   links: link;
 };
@@ -44,20 +44,27 @@ export type store = {
 type hour = {
   day: string;
   schedules: string;
-}
+};
 
 type menu = {
   name: string;
   price: string;
-}
+};
 
 type link = {
   type: string;
   url: string;
-}
+};
 
 export type Category = {
   name: string;
   icon: any;
   color: string;
-}
+};
+
+export type Review = {
+  score: number;
+  reviewer: string;
+  review: string;
+  review_date: Date;
+};

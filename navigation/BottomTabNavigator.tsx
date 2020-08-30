@@ -1,15 +1,19 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
+import { Image, Platform } from 'react-native';
 
 import Colors from '../constants/Colors';
 import useColorScheme from '../hooks/useColorScheme';
-import TabTwoScreen from '../screens/TabTwoScreen';
-import { BottomTabParamList, HomeParamList, TabTwoParamList } from '../types';
 import HomeScreen from '../screens/HomeScreen';
-import { Image, Platform } from 'react-native';
+import MyPageScreen from '../screens/MyPageScreen';
 import StoreDetailScreen from '../screens/StoreDetailScreen';
+import {
+  BottomTabParamList,
+  HomeParamList,
+  MyPageStackParamList,
+} from '../types';
 
 const BottomTab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -21,9 +25,10 @@ export default function BottomTabNavigator() {
   return (
     <BottomTab.Navigator
       initialRouteName="HomeStack"
-      tabBarOptions={{ activeTintColor: Colors[colorScheme].tint , style : {height: tabHeight}}}
-      >
-        
+      tabBarOptions={{
+        activeTintColor: Colors[colorScheme].tint,
+        style: { height: tabHeight },
+      }}>
       <BottomTab.Screen
         name="HomeStack"
         component={HomeStackNavigator}
@@ -34,17 +39,22 @@ export default function BottomTabNavigator() {
               source={require('../assets/images/pets_tab_01_on.png')}
             />
           ),
-          tabBarLabel: '댕댕여지도'
+          tabBarLabel: '댕댕여지도',
         }}
       />
       <BottomTab.Screen
-        name="TabTwo"
-        component={TabTwoNavigator}
+        name="MyPageStack"
+        component={MyPageStackNavigator}
         options={{
           tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons size={30} style={{ marginBottom: -3 }} name="account-box" color={color} />
+            <MaterialCommunityIcons
+              size={30}
+              style={{ marginBottom: -3 }}
+              name="account-box"
+              color={color}
+            />
           ),
-          tabBarLabel: '마이페이지'
+          tabBarLabel: '마이페이지',
         }}
       />
     </BottomTab.Navigator>
@@ -72,22 +82,22 @@ function HomeStackNavigator() {
       <HomeStack.Screen
         name="StoreDetail"
         component={StoreDetailScreen}
-        options={{ headerShown: false }}
+        options={{}}
       />
     </HomeStack.Navigator>
   );
 }
 
-const TabTwoStack = createStackNavigator<TabTwoParamList>();
+const MyPageStack = createStackNavigator<MyPageStackParamList>();
 
-function TabTwoNavigator() {
+function MyPageStackNavigator() {
   return (
-    <TabTwoStack.Navigator>
-      <TabTwoStack.Screen
-        name="TabTwoScreen"
-        component={TabTwoScreen}
-        options={{ headerTitle: 'Tab Two Title' }}
+    <MyPageStack.Navigator>
+      <MyPageStack.Screen
+        name="MyPageScreen"
+        component={MyPageScreen}
+        options={{ headerTitle: '마이페이지' }}
       />
-    </TabTwoStack.Navigator>
+    </MyPageStack.Navigator>
   );
 }

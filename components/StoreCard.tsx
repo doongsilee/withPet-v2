@@ -3,7 +3,7 @@ import { Text, StyleSheet, View, Image } from 'react-native';
 import { Icon } from 'react-native-elements';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
-import { location, store } from '../types';
+import { store } from '../types';
 
 const styles = StyleSheet.create({
   container: {
@@ -57,10 +57,6 @@ type Props = {
 };
 
 export default class StoreCard extends PureComponent<Props> {
-  constructor(props: Props) {
-    super(props);
-  }
-
   render() {
     const { store } = this.props;
     // console.log(store.hours[0].day);

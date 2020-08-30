@@ -1,14 +1,21 @@
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import * as firebase from 'firebase';
 import React, { PureComponent } from 'react';
-import { Text, View, StyleSheet, Linking } from 'react-native';
+import 'firebase/firestore';
+import * as Location from 'expo-location';
+import { Text, View, StyleSheet, Linking, Platform } from 'react-native';
 import { Icon, Button } from 'react-native-elements';
 import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
 import { SliderBox } from 'react-native-image-slider-box';
 import { getStatusBarHeight } from 'react-native-status-bar-height';
+import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 
+import ReviewsTab from '../components/ReviewsTab';
+import StoreInfoTab from '../components/StoreInfoTab';
 import Colors from '../constants/Colors';
-import { HomeParamList } from '../types';
+import Layout from '../constants/Layout';
+import { HomeParamList, store, Review, location } from '../types';
 
 type DetailScreenNavigationProp = StackNavigationProp<
   HomeParamList,
@@ -23,8 +30,11 @@ type Tprops = {
 };
 
 type Tstate = {
-  foldServices: boolean;
-  foldOpenningHour: boolean;
+  selectedTabIndex: number;
+  tabRoutes: { key: string; title: string }[];
+  reviews: Review[];
+  curLocation: location;
+  // store: store;
   // openingHours: Array<Object>;
   // services: Array<Object>;
 };
@@ -35,63 +45,138 @@ export class StoreDetailScreen extends PureComponent<Tprops, Tstate> {
 
     // let hoursRegex: string = '([가-힣]+) ([0-9:]+ - [0-9:]+)';
 
-    const { store } = this.props.route.params;
-
-    console.log(store);
-    // let openingHours = store.hours.map(hour => {
-    //   // console.log()
-    //   if (hour.match(hoursRegex)) {
-    //     return {
-    //       day: hour.match(hoursRegex)[1],
-    //       schedules: hour.match(hoursRegex)[2],
-    //     };
-    //   } else {
-    //     return {
-    //       day: hour,
-    //       schedules: '',
-    //     };
-    //   }
-    // });
-
-    // let menus = [];
-    // for (const menu in store.menus) {
-    //   console.log(`${menu}: ${store.menus[menu]}`);
-    //   menus.push({
-    //     name: menu,
-    //     price:
-    //       store.menus[menu] === '변동'
-    //         ? store.menus[menu]
-    //         : Number(store.menus[menu]).toLocaleString() + '원',
-    //   });
-    // }
-
-    // console.log(store.links === '');
+    // const { store } = this.props.route.params;
 
     this.state = {
-      foldServices: true,
-      foldOpenningHour: true,
-      // openingHours: openingHours,
-      // services: menus,
+      selectedTabIndex: 0,
+      tabRoutes: [
+        { key: 'info', title: '매장정보' },
+        { key: 'reviews', title: '매장후기' },
+      ],
+      reviews: [],
+      curLocation: { latitude: 37.05, longitude: 123.0 },
     };
   }
+
+  componentDidMount() {
+    this.retreiveDeviceLocation();
+    this.retreiveReviews();
+  }
+
+  retreiveDeviceLocation = async () => {
+    const { status } = await Location.requestPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('Permission to access location was denied');
+    }
+    const location = await Location.getCurrentPositionAsync({});
+    const curLocation: location = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    };
+
+    this.setState({
+      curLocation,
+    });
+  };
+
+  retreiveReviews = async () => {
+    const { store } = this.props.route.params;
+
+    const querySnapshot = await firebase
+      .firestore()
+      .collection('Places')
+      .doc(store.id)
+      .collection('Reviews')
+      .get();
+
+    const _reviews: Review[] = [];
+    for (const docSnapshot of querySnapshot.docs) {
+      const id = docSnapshot.id;
+      // const data: store = { id, ...docSnapshot.data() } as store;
+      // places.push(data);
+      console.log(docSnapshot.data());
+      _reviews.push(docSnapshot.data() as Review);
+      // console.log(docSnapshot.data());
+    }
+
+    this.setState({ reviews: _reviews });
+  };
+
+  renderTabBar = (props: any) => (
+    <TabBar
+      {...props}
+      navigationState={{
+        index: this.state.selectedTabIndex,
+        routes: this.state.tabRoutes,
+      }}
+      indicatorStyle={{ backgroundColor: Colors.light.tint }}
+      style={{ backgroundColor: 'white', paddingVertical: 10 }}
+      labelStyle={{ fontSize: 16 }}
+      activeColor={Colors.light.tint}
+      inactiveColor="#aaaaaa"
+    />
+  );
+
+  onFindWayClicked = () => {
+    const { curLocation } = this.state;
+    const { store } = this.props.route.params;
+
+    const baseUrl = 'nmap://route/public?';
+
+    const record: Record<string, string> = {
+      appname: 'com.nowwhat',
+      sname: '내위치',
+      slng: curLocation.longitude,
+      slat: curLocation.latitude,
+      dname: store.name,
+      dlng: store.gps.longitude,
+      dlat: store.gps.latitude,
+    };
+
+    // eslint-disable-next-line no-undef
+    const params = new URLSearchParams(record);
+
+    const url = baseUrl + params;
+
+    const appStoreUrl =
+      Platform.OS === 'ios'
+        ? 'https://itunes.apple.com/app/id311867728?mt=8'
+        : 'market://details?id=com.nhn.android.nmap';
+
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (!supported) {
+          console.log("Can't handle url: " + url);
+          return Linking.openURL(appStoreUrl);
+        } else {
+          return Linking.openURL(url);
+        }
+      })
+      .catch((err) => console.error('An error occurred', err));
+  };
+
   render() {
     const { store } = this.props.route.params;
-    const {
-      foldOpenningHour,
-      foldServices,
-      // openingHours,
-      // services,
-    } = this.state;
 
-    console.log(store);
-    // let result = store.hours[0].match(hoursRegex);
-    // console.log(store.hours[0]);
-    // console.log(result);
+    const { selectedTabIndex, tabRoutes, reviews } = this.state;
+
+    const renderScene = SceneMap({
+      info: () => (
+        <StoreInfoTab isActiveTab={selectedTabIndex === 0} store={store} onFindWayClicked={this.onFindWayClicked}/>
+      ),
+      reviews: () => (
+        <ReviewsTab
+          isActiveTab={selectedTabIndex === 1}
+          reviews={reviews}
+          navigation={this.props.navigation}
+        />
+      ),
+    });
 
     return (
       <View style={styles.container}>
         <ScrollView>
-          <View style={styles.header}>
+          {/* <View style={styles.header}>
             <TouchableOpacity
               style={styles.backbutton}
               onPress={() => this.props.navigation.goBack()}>
@@ -102,7 +187,7 @@ export class StoreDetailScreen extends PureComponent<Tprops, Tstate> {
                 color="white"
               />
             </TouchableOpacity>
-          </View>
+          </View> */}
           <SliderBox
             images={store.images}
             style={styles.storeImages}
@@ -120,190 +205,18 @@ export class StoreDetailScreen extends PureComponent<Tprops, Tstate> {
             source={require('../assets/images/cafe_temp.jpeg')}
             style={styles.storeImages}
           /> */}
-          <View style={styles.contentArea}>
-            <View style={styles.nameCard}>
-              <Text style={[styles.sectionName, styles.fontBold]}>
-                {store.name}
-              </Text>
-              <Text style={styles.category}>{store.category.join(' / ')}</Text>
-            </View>
-            {store.tags && (
-              <View style={styles.tags}>
-                {store.tags.map((tag) => {
-                  if (tag !== '') return <Text style={styles.tag}>{tag}</Text>;
-                })}
-              </View>
-            )}
-            <View style={styles.extraInfo}>
-              <View style={styles.iconRow}>
-                <Icon name="location" type="evilicon" size={16} />
-                <Text style={styles.iconText}>{store.address}</Text>
-              </View>
-              <View style={styles.iconRow}>
-                <Icon name="phone" type="MaterialIcons" size={16} />
-                <Text style={styles.iconText}>{store.phone}</Text>
-              </View>
-            </View>
-            <View style={styles.separator} />
-            <View style={styles.openingHoursSection}>
-              <Text style={styles.sectionName}>영업시간</Text>
-              {foldOpenningHour ? (
-                <View style={[styles.spaceBetweenRow, { marginTop: 16 }]}>
-                  <Text style={styles.fontBody}>
-                    {store.hours && store.hours[0] && store.hours[0].day !== ''
-                      ? store.hours[0].day
-                      : '정보 없음'}
-                  </Text>
-                  <Text style={styles.fontBody}>
-                    {store.hours && store.hours[0] && store.hours[0].schedules}
-                  </Text>
-                </View>
-              ) : (
-                store.hours.map((data) => (
-                  <View style={[styles.spaceBetweenRow, { marginTop: 16 }]}>
-                    <Text style={styles.fontBody}>{data.day}</Text>
-                    <Text style={styles.fontBody}>{data.schedules}</Text>
-                  </View>
-                ))
-              )}
-
-              <Button
-                title="영업시간 더보기"
-                type="clear"
-                titleStyle={{
-                  color: Colors.primariy,
-                  ...styles.fontBody,
-                }}
-                onPress={() =>
-                  this.setState({
-                    foldOpenningHour: !this.state.foldOpenningHour,
-                  })
-                }
-              />
-            </View>
-            <View style={styles.separator} />
-            <View style={styles.serviceSection}>
-              <Text style={styles.sectionName}>서비스</Text>
-              {foldServices ? (
-                <View style={[styles.spaceBetweenRow, { marginTop: 12 }]}>
-                  <Text style={styles.fontBody}>
-                    {store.menus[0] ? store.menus[0].name : '메뉴 정보 없음'}
-                  </Text>
-                  <Text style={styles.fontBody}>
-                    {store.menus[0].price === '변동'
-                      ? store.menus[0].price
-                      : Number(store.menus[0].price).toLocaleString() + '원'}
-                  </Text>
-                </View>
-              ) : (
-                store.menus.map((service) => (
-                  <View style={[styles.spaceBetweenRow, { marginTop: 12 }]}>
-                    <Text style={styles.fontBody}>{service.name}</Text>
-                    <Text style={styles.fontBody}>
-                      {service.price === '변동'
-                        ? service.price
-                        : Number(service.price).toLocaleString() + '원'}
-                    </Text>
-                  </View>
-                ))
-              )}
-              <Button
-                title="서비스 더보기"
-                type="clear"
-                titleStyle={{
-                  color: Colors.primariy,
-                  ...styles.fontBody,
-                }}
-                onPress={() =>
-                  this.setState({
-                    foldServices: !this.state.foldServices,
-                  })
-                }
-              />
-            </View>
-            <View style={styles.separator} />
-            <View style={styles.snsSection}>
-              {store.links && store.links.type === 'instagram' ? (
-                <View style={styles.snsCard}>
-                  <Button
-                    // ViewComponent={LinearGradient}
-                    // linearGradientProps={{
-                    //   colors: ['#fed576', '#f47133', '#bc3081', '#4c63d2'],
-                    //   start: { x: 0, y: 1 },
-                    //   end: { x: 1, y: 0 },
-                    // }}
-                    icon={
-                      <Icon
-                        name="logo-instagram"
-                        type="ionicon"
-                        size={28}
-                        color="white"
-                      />
-                    }
-                    containerStyle={styles.snsButtonStyle}
-                    onPress={() => {
-                      Linking.openURL(store.links.url);
-                    }}
-                  />
-                  <View style={styles.snsNameCard}>
-                    <Text style={[styles.fontBody, styles.fontBold]}>
-                      #{store.name}
-                    </Text>
-                    <Text style={styles.fontBody}>인스타그램</Text>
-                  </View>
-                </View>
-              ) : store.links.type === 'blog' ? (
-                <View style={styles.snsCard}>
-                  <Button
-                    icon={
-                      <Icon
-                        name="logo-instagram"
-                        type="ionicon"
-                        size={28}
-                        color="white"
-                      />
-                    }
-                    containerStyle={styles.snsButtonStyle}
-                    buttonStyle={{ backgroundColor: '#00c73c' }}
-                    onPress={() => {
-                      Linking.openURL(store.links.url);
-                    }}
-                  />
-                  <View style={styles.snsNameCard}>
-                    <Text style={[styles.fontBody, styles.fontBold]}>
-                      #{store.name}
-                    </Text>
-                    <Text style={styles.fontBody}>블로그</Text>
-                  </View>
-                </View>
-              ) : (
-                store.links.type === 'website' && (
-                  <View style={styles.snsCard}>
-                    <Button
-                      icon={
-                        <Icon
-                          name="logo-instagram"
-                          type="ionicon"
-                          size={28}
-                          color="white"
-                        />
-                      }
-                      containerStyle={styles.snsButtonStyle}
-                      buttonStyle={{ backgroundColor: '#4c63d2' }}
-                      onPress={() => {
-                        Linking.openURL(store.links.url);
-                      }}
-                    />
-                    <View style={styles.snsNameCard}>
-                      <Text style={[styles.fontBody, styles.fontBold]}>
-                        #{store.name}
-                      </Text>
-                      <Text style={styles.fontBody}>웹사이트</Text>
-                    </View>
-                  </View>
-                )
-              )}
-            </View>
+          <View style={{ width: Layout.window.width }}>
+            <TabView
+              renderTabBar={this.renderTabBar}
+              navigationState={{ index: selectedTabIndex, routes: tabRoutes }}
+              renderScene={renderScene}
+              onIndexChange={(index) =>
+                this.setState({
+                  selectedTabIndex: index,
+                })
+              }
+              initialLayout={{ width: 120 }}
+            />
           </View>
         </ScrollView>
       </View>
@@ -313,7 +226,7 @@ export class StoreDetailScreen extends PureComponent<Tprops, Tstate> {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: getStatusBarHeight(),
+    // marginTop: getStatusBarHeight(),
     flex: 1,
   },
   header: {
@@ -334,82 +247,6 @@ const styles = StyleSheet.create({
   storeImages: {
     width: '100%',
     height: 312,
-  },
-  contentArea: {
-    backgroundColor: 'white',
-    flex: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    marginTop: -15,
-    paddingHorizontal: 12,
-    paddingVertical: 30,
-  },
-  nameCard: {
-    marginLeft: 4,
-  },
-  sectionName: {
-    fontSize: 20,
-  },
-  category: {
-    marginTop: 4,
-    color: 'grey',
-    fontSize: 20,
-  },
-  tags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 16,
-  },
-  tag: {
-    backgroundColor: Colors.primariy,
-    color: 'white',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginLeft: 4,
-    borderRadius: 15,
-    overflow: 'hidden',
-    marginTop: 4,
-  },
-  extraInfo: { marginLeft: 4 },
-  iconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  iconText: {
-    marginLeft: 4,
-    fontSize: 16,
-  },
-  separator: {
-    marginVertical: 24,
-    height: 1,
-    backgroundColor: '#e9e9e9',
-    marginHorizontal: 4,
-  },
-  openingHoursSection: {
-    marginHorizontal: 4,
-  },
-  spaceBetweenRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  serviceSection: {},
-  snsSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-  },
-  snsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  snsNameCard: {
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  snsButtonStyle: {
-    width: 44,
-    borderRadius: 45,
-    overflow: 'hidden',
   },
 
   //temp
