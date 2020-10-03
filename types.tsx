@@ -11,7 +11,7 @@ export type BottomTabParamList = {
 
 export type HomeParamList = {
   Home: undefined;
-  StoreDetail: { store: store };
+  StoreDetail: { store: store, name: string };
 };
 
 export type MyPageStackParamList = {

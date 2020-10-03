@@ -21,7 +21,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "org.reactjs.native.example.withPet"
+      "buildNumber": "1.9.0",
+      "bundleIdentifier": "com.withpet"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

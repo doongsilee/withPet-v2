@@ -73,7 +73,12 @@ const HomeStack = createStackNavigator<HomeParamList>();
 
 function HomeStackNavigator() {
   return (
-    <HomeStack.Navigator initialRouteName="Home">
+    <HomeStack.Navigator
+      initialRouteName="Home"
+      screenOptions={{
+        headerBackTitleVisible: false,
+        headerTintColor: 'black',
+      }}>
       <HomeStack.Screen
         name="Home"
         component={HomeScreen}
@@ -82,7 +87,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen
         name="StoreDetail"
         component={StoreDetailScreen}
-        options={{}}
+        options={({ route }) => ({ title: route.params.name })}
       />
     </HomeStack.Navigator>
   );

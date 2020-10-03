@@ -12,6 +12,7 @@ import {
   Animated,
   TouchableOpacity,
   FlatList,
+  LayoutAnimation,
 } from 'react-native';
 import { Icon, Header, Button } from 'react-native-elements';
 import MapView, {
@@ -38,6 +39,9 @@ import { HomeParamList, store, location, Category } from '../types';
 import * as Location from 'expo-location';
 // import { FlatList } from 'react-native-gesture-handler';
 
+const VIEW_MODE_MAP = 100000;
+const VIEW_MODE_LIST = 200000;
+
 const ASPECT_RATIO = layout.window.width / layout.window.height;
 const LATITUDE_DELTA = 0.0922;
 const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
@@ -60,6 +64,8 @@ type Tstate = {
   selectedCategory: number;
   scrollY: Animated.AnimatedValue;
   userTouched: boolean;
+  viewMode: number;
+  listHeight: number;
 };
 
 export default class HomeScreen extends React.Component<Tprops, Tstate> {
@@ -82,6 +88,8 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
       scrollY: new Animated.Value(0),
       userTouched: false,
       selectedMarker: null,
+      viewMode: VIEW_MODE_MAP,
+      listHeight: 250,
     };
   }
 
@@ -260,7 +268,10 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
   };
 
   handlePressStore = (store: store) => {
-    this.props.navigation.navigate('StoreDetail', { store });
+    this.props.navigation.push('StoreDetail', {
+      store,
+      name: store.name,
+    });
   };
 
   handleRegionChanged = (region: Region) => {
@@ -319,6 +330,16 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
     // })
   };
 
+  onChangeViewMode = () => {
+    if (this.state.viewMode === VIEW_MODE_MAP) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      this.setState({ viewMode: VIEW_MODE_LIST, listHeight: 800 });
+    } else {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      this.setState({ viewMode: VIEW_MODE_MAP, listHeight: 250 });
+    }
+  };
+
   render() {
     const {
       ancorLocation,
@@ -327,7 +348,6 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
       places,
       isShowingStores,
       selectedCategory,
-      scrollY,
       needRefresh,
       selectedMarker,
     } = this.state;
@@ -420,11 +440,11 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
                   );
                 })}
               </ScrollView>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={styles.myLocationButton}
                 onPress={this.retreiveDeviceLocation}>
                 <Icon name="my-location" size={18} color={Colors.primariy} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           ) : (
             <>
@@ -442,12 +462,16 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
                     text: categories[selectedCategory].name,
                     style: { color: '#000' },
                   }}
+                  rightComponent={{
+                    icon:
+                      this.state.viewMode === VIEW_MODE_MAP ? 'list' : 'map',
+                    color:
+                      this.state.viewMode === VIEW_MODE_MAP
+                        ? '#000'
+                        : Colors.primariy,
+                    onPress: this.onChangeViewMode,
+                  }}
                 />
-                <TouchableOpacity
-                  style={[styles.myLocationButton, { marginTop: 10 }]}
-                  onPress={this.retreiveDeviceLocation}>
-                  <Icon name="my-location" size={18} color={Colors.primariy} />
-                </TouchableOpacity>
 
                 {needRefresh && (
                   <Button
@@ -476,40 +500,25 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
               </View>
               {places.length > 0 &&
                 (selectedMarker === null ? (
-                  <SlidingUpPanel
-                    ref={(c) => (this.panel = c)}
-                    draggableRange={{
-                      top: layout.window.height - 88 - 80,
-                      bottom: 200,
-                    }}
-                    containerStyle={styles.listView}
-                    // animatedValue={this._draggedValue}
-                    showBackdrop={false}>
-                    {(dragHandler) => (
-                      <View
-                        style={{
-                          flex: 1,
-                          zIndex: -3,
-                          backgroundColor: 'white',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
-                        <View style={styles.dragHandler} {...dragHandler}>
-                          <View style={styles.indicator} />
-                        </View>
-                        <FlatList
-                          style={{ width: '100%' }}
-                          data={places}
-                          renderItem={(item) => (
-                            <StoreCard
-                              store={item.item}
-                              onPress={this.handlePressStore}
-                            />
-                          )}
+                  <View
+                    style={{
+                      height: this.state.listHeight,
+                      zIndex: 3,
+                      backgroundColor: 'white',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <FlatList
+                      style={{ width: '100%' }}
+                      data={places}
+                      renderItem={(item) => (
+                        <StoreCard
+                          store={item.item}
+                          onPress={this.handlePressStore}
                         />
-                      </View>
-                    )}
-                  </SlidingUpPanel>
+                      )}
+                    />
+                  </View>
                 ) : (
                   <View style={styles.shadow}>
                     <StoreCard
@@ -523,6 +532,11 @@ export default class HomeScreen extends React.Component<Tprops, Tstate> {
             </>
           )}
         </View>
+        <TouchableOpacity
+          style={[styles.myLocationButton]}
+          onPress={this.retreiveDeviceLocation}>
+          <Icon name="my-location" size={18} color={Colors.primariy} />
+        </TouchableOpacity>
       </View>
     );
   }
@@ -655,7 +669,10 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   myLocationButton: {
+    position: 'absolute',
     backgroundColor: 'white',
+    top: 150,
+    right: 15,
     width: 45,
     height: 45,
     flexDirection: 'row',
@@ -663,7 +680,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 45,
     alignSelf: 'flex-end',
-    marginRight: 15,
+    // marginRight: 15,
   },
   searchThisAreaBtn: {
     width: 160,

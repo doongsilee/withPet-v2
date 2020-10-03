@@ -165,89 +165,93 @@ const StoreInfoTab = ({
           onPress={() => setFoldServices(!foldServices)}
         />
       </View>
-      <View style={styles.separator} />
-      <View style={styles.snsSection}>
-        {store.links && store.links.type === 'instagram' ? (
-          <View style={styles.snsCard}>
-            <Button
-              ViewComponent={LinearGradient}
-              linearGradientProps={{
-                colors: ['#fed576', '#f47133', '#bc3081', '#4c63d2'],
-                start: { x: 0, y: 1 },
-                end: { x: 1, y: 0 },
-              }}
-              icon={
-                <Icon
-                  name="logo-instagram"
-                  type="ionicon"
-                  size={28}
-                  color="white"
+      {store.links !== undefined && store.links.type !== undefined && (
+        <>
+          <View style={styles.separator} />
+          <View style={styles.snsSection}>
+            {store.links && store.links.type === 'instagram' ? (
+              <View style={styles.snsCard}>
+                <Button
+                  ViewComponent={LinearGradient}
+                  linearGradientProps={{
+                    colors: ['#fed576', '#f47133', '#bc3081', '#4c63d2'],
+                    start: { x: 0, y: 1 },
+                    end: { x: 1, y: 0 },
+                  }}
+                  icon={
+                    <Icon
+                      name="logo-instagram"
+                      type="ionicon"
+                      size={28}
+                      color="white"
+                    />
+                  }
+                  containerStyle={styles.snsButtonStyle}
+                  onPress={() => {
+                    Linking.openURL(store.links.url);
+                  }}
                 />
-              }
-              containerStyle={styles.snsButtonStyle}
-              onPress={() => {
-                Linking.openURL(store.links.url);
-              }}
-            />
-            <View style={styles.snsNameCard}>
-              <Text style={[styles.fontBody, styles.fontBold]}>
-                {store.name}
-              </Text>
-              <Text style={styles.fontBody}>인스타그램</Text>
-            </View>
-          </View>
-        ) : store.links.type === 'blog' ? (
-          <View style={styles.snsCard}>
-            <Button
-              icon={
-                <Icon
-                  name="logo-instagram"
-                  type="ionicon"
-                  size={28}
-                  color="white"
-                />
-              }
-              containerStyle={styles.snsButtonStyle}
-              buttonStyle={{ backgroundColor: '#00c73c' }}
-              onPress={() => {
-                Linking.openURL(store.links.url);
-              }}
-            />
-            <View style={styles.snsNameCard}>
-              <Text style={[styles.fontBody, styles.fontBold]}>
-                #{store.name}
-              </Text>
-              <Text style={styles.fontBody}>블로그</Text>
-            </View>
-          </View>
-        ) : (
-          store.links.type === 'website' && (
-            <View style={styles.snsCard}>
-              <Button
-                icon={
-                  <Icon
-                    name="logo-instagram"
-                    type="ionicon"
-                    size={28}
-                    color="white"
-                  />
-                }
-                containerStyle={styles.snsButtonStyle}
-                buttonStyle={{ backgroundColor: '#4c63d2' }}
-                onPress={() => {
-                  Linking.openURL(store.links.url);
-                }}
-              />
-              <View style={styles.snsNameCard}>
-                <Text style={[styles.fontBody, styles.fontBold]}>
-                  #{store.name}
-                </Text>
-                <Text style={styles.fontBody}>웹사이트</Text>
+                <View style={styles.snsNameCard}>
+                  <Text style={[styles.fontBody, styles.fontBold]}>
+                    {store.name}
+                  </Text>
+                  <Text style={styles.fontBody}>인스타그램</Text>
+                </View>
               </View>
-            </View>
-          )
-        )}
-      </View>
+            ) : store.links.type === 'blog' ? (
+              <View style={styles.snsCard}>
+                <Button
+                  icon={
+                    <Icon
+                      name="logo-instagram"
+                      type="ionicon"
+                      size={28}
+                      color="white"
+                    />
+                  }
+                  containerStyle={styles.snsButtonStyle}
+                  buttonStyle={{ backgroundColor: '#00c73c' }}
+                  onPress={() => {
+                    Linking.openURL(store.links.url);
+                  }}
+                />
+                <View style={styles.snsNameCard}>
+                  <Text style={[styles.fontBody, styles.fontBold]}>
+                    #{store.name}
+                  </Text>
+                  <Text style={styles.fontBody}>블로그</Text>
+                </View>
+              </View>
+            ) : (
+              store.links.type === 'website' && (
+                <View style={styles.snsCard}>
+                  <Button
+                    icon={
+                      <Icon
+                        name="logo-instagram"
+                        type="ionicon"
+                        size={28}
+                        color="white"
+                      />
+                    }
+                    containerStyle={styles.snsButtonStyle}
+                    buttonStyle={{ backgroundColor: '#4c63d2' }}
+                    onPress={() => {
+                      Linking.openURL(store.links.url);
+                    }}
+                  />
+                  <View style={styles.snsNameCard}>
+                    <Text style={[styles.fontBody, styles.fontBold]}>
+                      #{store.name}
+                    </Text>
+                    <Text style={styles.fontBody}>웹사이트</Text>
+                  </View>
+                </View>
+              )
+            )}
+          </View>
+        </>
+      )}
     </View>
   );
 };

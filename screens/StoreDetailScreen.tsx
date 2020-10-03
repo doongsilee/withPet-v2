@@ -157,12 +157,15 @@ export class StoreDetailScreen extends PureComponent<Tprops, Tstate> {
 
   render() {
     const { store } = this.props.route.params;
-
     const { selectedTabIndex, tabRoutes, reviews } = this.state;
 
     const renderScene = SceneMap({
       info: () => (
-        <StoreInfoTab isActiveTab={selectedTabIndex === 0} store={store} onFindWayClicked={this.onFindWayClicked}/>
+        <StoreInfoTab
+          isActiveTab={selectedTabIndex === 0}
+          store={store}
+          onFindWayClicked={this.onFindWayClicked}
+        />
       ),
       reviews: () => (
         <ReviewsTab
